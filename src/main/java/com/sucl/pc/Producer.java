@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 生产者
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeoutException;
  * @date 2019/5/14
  */
 public class Producer {
+    private AtomicInteger msgCount = new AtomicInteger(0);
 
     public void produce(String message) throws IOException, TimeoutException, InterruptedException {
         Connection connection = AmqpConnectionFactory.getConnection(new AmqpConfig());
@@ -45,12 +47,13 @@ public class Producer {
         channel.addConfirmListener(new ConfirmListener() {
             @Override
             public void handleAck(long deliveryTag, boolean multiple) throws IOException {
-                System.out.println("消息发送成功！");
+//                System.out.println("消息发送成功！ "+deliveryTag);
+                msgCount.incrementAndGet();
             }
 
             @Override
             public void handleNack(long deliveryTag, boolean multiple) throws IOException {
-                System.out.println("消息发送失败！");
+                System.out.println("消息发送失败！ "+deliveryTag);
             }
         });
         /**
@@ -69,18 +72,19 @@ public class Producer {
          */
         int count = 0;
 //        AMQP.BasicProperties properties = new AMQP.BasicProperties().builder().expiration("12000").build();
-        while (count++ <10){
-            TimeUnit.MILLISECONDS.sleep(500);
-            channel.basicPublish(Common.EXCHANGE_X1,Common.ROUTING_KEY1,false,false,null,(new Date()+message).getBytes());
+        while (count++ <100000){
+//            TimeUnit.MILLISECONDS.sleep(500);
+            channel.basicPublish(Common.EXCHANGE_X1,Common.ROUTING_KEY1,false,false,null,(new Date()+message+count).getBytes());
         }
 
-        channel.close();
-
-        AmqpConnectionFactory.close(connection);
+//        channel.close();
+//
+//        AmqpConnectionFactory.close(connection);
     }
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         Producer producer = new Producer();
         producer.produce("消息 ");
+        System.out.println(producer.msgCount.intValue());
     }
 }
